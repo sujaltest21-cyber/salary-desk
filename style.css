@@ -530,7 +530,7 @@ select.input-field {
 
 .emp-table.compact th {
   padding: 3px 5px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .emp-table.compact td {
@@ -542,6 +542,11 @@ select.input-field {
   font-size: 14.5px;
   font-weight: 500;
   height: 26px;
+  text-align: center;
+}
+
+.emp-table.compact .inline-input.name-input {
+  text-align: left;
 }
 
 .dept-group-header h3 {
