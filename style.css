@@ -577,7 +577,7 @@ select.input-field {
 }
 
 .emp-table th {
-  text-align: left;
+  text-align: center;
   padding: 8px 10px;
   font-size: 10px;
   font-weight: 600;
@@ -588,9 +588,14 @@ select.input-field {
 }
 
 .emp-table td {
+  text-align: center;
   padding: 6px 10px;
   border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
+}
+
+.emp-table td:first-child {
+  text-align: left;
 }
 
 .emp-table tr:last-child td {
