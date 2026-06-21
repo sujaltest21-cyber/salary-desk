@@ -314,10 +314,10 @@ function showAddEmployeeModal() {
     openModal('Add Employee', '<p style="color:#6b7280;font-size:14px">Please add a department first.</p>');
     return;
   }
-  const deptOpts = '<option value="" disabled selected hidden>Select Department</option>' + state.departments.map(d => `<option value="${escHtml(d)}">${escHtml(d)}</option>`).join('');
+  const deptOpts = '<option value="" disabled selected>Select Department</option>' + state.departments.map(d => `<option value="${escHtml(d)}">${escHtml(d)}</option>`).join('');
   openModal('Add Employee', `
-    <select id="emp-dept" class="input-field" autofocus>${deptOpts}</select>
-    <input type="text" id="emp-name" class="input-field" placeholder="Employee name">
+    <input type="text" id="emp-name" class="input-field" placeholder="Employee name" autofocus>
+    <select id="emp-dept" class="input-field">${deptOpts}</select>
     <input type="number" id="emp-salary" class="input-field" placeholder="Salary">
     <input type="date" id="emp-date" class="input-field">
     <input type="text" id="emp-remark" class="input-field" placeholder="Remark (optional)">
@@ -326,17 +326,28 @@ function showAddEmployeeModal() {
   document.getElementById('emp-date').value = new Date().toISOString().slice(0, 10);
   setTimeout(() => {
     document.getElementById('add-emp-btn').addEventListener('click', addEmployee);
+    const name = document.getElementById('emp-name');
     const dept = document.getElementById('emp-dept');
+    const salary = document.getElementById('emp-salary');
+    const date = document.getElementById('emp-date');
+    const remark = document.getElementById('emp-remark');
+    name.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); dept.focus(); }
+    });
     dept.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); dept.showPicker(); }
     });
     dept.addEventListener('change', () => {
-      if (dept.value) document.getElementById('emp-name').focus();
+      if (dept.value) salary.focus();
     });
-    ['emp-name', 'emp-salary', 'emp-date', 'emp-remark'].forEach(id => {
-      document.getElementById(id).addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); addEmployee(); }
-      });
+    salary.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); remark.focus(); }
+    });
+    date.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); remark.focus(); }
+    });
+    remark.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); addEmployee(); }
     });
   }, 0);
 }
