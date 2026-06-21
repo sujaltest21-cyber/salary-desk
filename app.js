@@ -827,13 +827,13 @@ function renderImagePreview() {
     return h;
   }
 
-  let html = '<div class="viewport-grid"><div class="view-heading-row"><h1 class="view-heading">Image Generate Preview</h1><button class="btn btn-sm btn-primary" id="download-ledger-btn">Download Ledger Image</button></div><div class="image-preview-layout">';
+  let html = '<div class="viewport-grid"><div class="view-heading-row"><h1 class="view-heading">Image Generate Preview</h1><button class="btn btn-sm btn-primary" id="download-ledger-btn">Download Ledger Image</button></div><div class="image-capture-wrapper" id="image-capture-wrapper"><div class="image-preview-layout">';
   html += '<div class="ipl-left">';
   leftDepts.forEach(d => { html += renderDeptTable(d); });
   html += '</div>';
   html += '<div class="ipl-right">';
   rightDepts.forEach(d => { html += renderDeptTable(d); });
-  html += '</div></div></div>';
+  html += '</div></div></div></div>';
   vp.innerHTML = html;
   document.getElementById('download-ledger-btn').addEventListener('click', generateAndDownloadImage);
 }
@@ -842,7 +842,7 @@ function generateAndDownloadImage() {
   const btn = document.getElementById('download-ledger-btn');
   btn.textContent = 'Generating...';
   btn.disabled = true;
-  const el = document.querySelector('.image-preview-layout');
+  const el = document.getElementById('image-capture-wrapper');
   if (!el || typeof html2canvas === 'undefined') { btn.textContent = 'Download Ledger Image'; btn.disabled = false; return; }
   html2canvas(el, { scale: 2, backgroundColor: '#ffffff', logging: false }).then(canvas => {
     const link = document.createElement('a');
