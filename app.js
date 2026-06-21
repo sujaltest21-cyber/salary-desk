@@ -664,11 +664,11 @@ function renderEmployeePreview() {
       <div class="dept-body">
       <table class="emp-table compact">
         <thead><tr>
-          <th style="width:28%">Name</th>
-          <th style="width:14%">Date</th>
-          <th style="width:18%">Salary</th>
+          <th style="width:37%">Name</th>
+          <th style="width:10%">Date</th>
+          <th style="width:15%">Salary</th>
           <th style="width:22%">Remark</th>
-          <th style="width:6%">History</th>
+          <th style="width:4%">History</th>
           <th style="width:12%">Actions</th>
         </tr></thead>
         <tbody>`;
