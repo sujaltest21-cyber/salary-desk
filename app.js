@@ -331,11 +331,12 @@ function showAddEmployeeModal() {
     const salary = document.getElementById('emp-salary');
     const date = document.getElementById('emp-date');
     const remark = document.getElementById('emp-remark');
+    name.focus();
     name.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); dept.focus(); }
     });
     dept.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); dept.showPicker(); }
+      if (e.key === 'Enter' && !dept.value) { e.preventDefault(); dept.showPicker(); }
     });
     dept.addEventListener('change', () => {
       if (dept.value) salary.focus();
