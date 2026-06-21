@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1953,7 +1953,7 @@ function renderEmployeePreview() {
       html += `<tr data-id="${emp.id}">
         <td><input class="inline-input name-input" type="text" value="${escHtml(emp.name)}" readonly></td>
         <td><input class="inline-input" type="date" value="${emp.date || ''}" readonly></td>
-        <td><input class="inline-input salary-input" type="number" value="${emp.salary}" data-field="salary"></td>
+        <td><input class="inline-input salary-input" type="number" value="${emp.salary}" data-field="salary" readonly></td>
         <td><input class="inline-input" type="text" value="${escHtml(emp.remark || '')}" data-field="remark" placeholder="Add remark"></td>
         <td>${hCount ? `<button class="history-btn" data-id="${emp.id}">${hCount}</button>` : '<span style="color:#d1d5db;font-size:11px">0</span>'}</td>
         <td class="actions-cell"><button class="btn btn-sm btn-secondary inc-btn" data-id="${emp.id}">Increment</button><button class="btn btn-sm btn-danger resign-btn" data-id="${emp.id}">Resign</button></td>
