@@ -546,10 +546,13 @@ function processSettings() {
   const hours = parseInt(document.getElementById('set-auto-logout').value, 10);
   const error = document.getElementById('set-error');
   if (old !== state.password) { error.textContent = 'Current password is incorrect'; return; }
-  if (!newP) { error.textContent = 'Please enter a new password'; return; }
-  if (newP.length < 4) { error.textContent = 'Password must be at least 4 characters'; return; }
-  if (newP !== confirm) { error.textContent = 'Passwords do not match'; return; }
-  state.password = newP;
+  
+  if (newP) {
+    if (newP.length < 4) { error.textContent = 'Password must be at least 4 characters'; return; }
+    if (newP !== confirm) { error.textContent = 'Passwords do not match'; return; }
+    state.password = newP;
+  }
+  
   state.autoLogoutHours = (hours > 0) ? hours : 24;
   state.loginTime = Date.now();
   saveState();
@@ -677,6 +680,68 @@ function renderEmployeePreview() {
       html += `<tr data-id="${emp.id}">
         <td><input class="inline-input name-input" type="text" value="${escHtml(emp.name)}" readonly></td>
         <td><input class="inline-input" type="date" value="${emp.date || ''}" readonly></td>
+        <td><input class="inline-input salary-input" type="number" value="${emp.salary}" data-field="salary"></td>
+        <td><input class="inline-input" type="text" value="${escHtml(emp.remark || '')}" data-field="remark" placeholder="Add remark"></td>
+        <td>${hCount ? `<button class="history-btn" data-id="${emp.id}">${hCount}</button>` : '<span style="color:#d1d5db;font-size:11px">0</span>'}</td>
+        <td class="actions-cell"><button class="btn btn-sm btn-secondary inc-btn" data-id="${emp.id}">Increment</button><button class="btn btn-sm btn-danger resign-btn" data-id="${emp.id}">Resign</button></td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  });
+  html += '</div></div>';
+  vp.innerHTML = html;
+  attachInlineListeners();
+  attachHistoryButtons();
+  attachIncrementButtons();
+  attachResignButtons();
+  attachCollapseHeaders();
+}
+
+/* ---- Rendering: Employee Master ---- */
+function renderEmployeeMaster() {
+  currentView = 'employee-master';
+  const vp = document.getElementById('app-viewport');
+  const active = state.employees.filter(e => e.status === 'active');
+  if (!active.length) {
+    vp.innerHTML = '<div class="viewport-grid"><div class="viewport-empty" style="min-height:50vh">No active employees.</div></div>';
+    return;
+  }
+  const grouped = {};
+  state.departments.forEach(d => { grouped[d] = []; });
+  active.forEach(e => {
+    if (!grouped[e.department]) grouped[e.department] = [];
+    grouped[e.department].push(e);
+  });
+  let html = '<div class="viewport-grid"><h1 class="view-heading">EMP MASTER</h1><div class="employee-preview-grid">';
+  const deptKeys = Object.keys(grouped);
+  deptKeys.forEach((dept, i) => {
+    const emps = grouped[dept];
+    if (!emps.length) return;
+    if (i > 0 && i % 2 === 0) {
+      html += '<div class="grid-divider"></div>';
+    }
+    html += `<div class="dept-group" data-dept="${escHtml(dept)}">
+      <div class="dept-group-header">
+        <span class="collapse-icon">&#9660;</span>
+        <h3>${escHtml(dept)}</h3>
+        <span class="emp-count">${emps.length} employee${emps.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="dept-body">
+      <table class="emp-table compact">
+        <thead><tr>
+          <th style="width:37%">Name</th>
+          <th style="width:10%">Date</th>
+          <th style="width:15%">Salary</th>
+          <th style="width:22%">Remark</th>
+          <th style="width:4%">History</th>
+          <th style="width:12%">Actions</th>
+        </tr></thead>
+        <tbody>`;
+    emps.forEach(emp => {
+      const hCount = emp.history.length;
+      html += `<tr data-id="${emp.id}">
+        <td><input class="inline-input name-input" type="text" value="${escHtml(emp.name)}" data-field="name"></td>
+        <td><input class="inline-input" type="date" value="${emp.date || ''}" data-field="date"></td>
         <td><input class="inline-input salary-input" type="number" value="${emp.salary}" data-field="salary"></td>
         <td><input class="inline-input" type="text" value="${escHtml(emp.remark || '')}" data-field="remark" placeholder="Add remark"></td>
         <td>${hCount ? `<button class="history-btn" data-id="${emp.id}">${hCount}</button>` : '<span style="color:#d1d5db;font-size:11px">0</span>'}</td>
@@ -928,6 +993,9 @@ function handleNav(view) {
     case 'employee-preview':
       renderEmployeePreview();
       break;
+    case 'employee-master':
+      renderEmployeeMaster();
+      break;
     case 'employee-list':
       renderEmployeeList();
       break;
@@ -965,6 +1033,12 @@ function handleKeydown(e) {
 
 /* ---- Init ---- */
 function init() {
+  const localSession = sessionStorage.getItem('isAuthenticated');
+  if (localSession === 'true') {
+    document.getElementById('app-shell').classList.remove('hidden');
+    document.getElementById('login-panel').classList.add('hidden');
+  }
+
   loadState(() => {
     const loginSub = document.getElementById('login-subtitle');
 
