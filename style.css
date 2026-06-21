@@ -588,10 +588,10 @@ select.input-field {
 }
 
 .emp-table td {
-  text-align: center;
   padding: 6px 10px;
   border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
+  text-align: center;
 }
 
 .emp-table td:first-child {
@@ -613,6 +613,7 @@ select.input-field {
   border-bottom: 1px solid transparent;
   outline: none;
   transition: border-color 0.12s ease;
+  text-align: center;
 }
 
 .emp-table .inline-input:hover {
@@ -633,6 +634,7 @@ select.input-field {
 
 .emp-table .name-input {
   font-weight: 500;
+  text-align: left;
 }
 
 .emp-table .salary-input {
@@ -1030,6 +1032,8 @@ input::-ms-clear {
   grid-template-columns: 1fr 1fr;
   gap: 24px;
   align-items: start;
+  padding: 38px;
+  background: #ffffff;
 }
 
 .image-preview-layout,
