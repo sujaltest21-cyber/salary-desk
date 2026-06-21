@@ -372,10 +372,15 @@ function addEmployee() {
     resignationReason: null
   });
   saveState();
-  closeModal();
   showCheck();
   if (currentView === 'employee-preview') renderEmployeePreview();
   else if (currentView === 'employee-list') renderEmployeeList();
+  document.getElementById('emp-name').value = '';
+  document.getElementById('emp-dept').value = '';
+  document.getElementById('emp-salary').value = '';
+  document.getElementById('emp-remark').value = '';
+  document.getElementById('emp-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('emp-name').focus();
 }
 
 /* ---- Inline Update (no history push) ---- */
