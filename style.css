@@ -98,7 +98,7 @@ select,
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 0 2cm;
+  padding: 0 50px;
   height: 42px;
 }
 
@@ -205,7 +205,7 @@ select,
 }
 
 .viewport-grid {
-  padding: 12px 2cm 24px 2cm;
+  padding: 12px 50px 24px 50px;
   width: 100%;
   flex: 1;
 }
