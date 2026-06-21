@@ -52,7 +52,8 @@ let state = {
   departments: [],
   employees: [],
   loginTime: null,
-  autoLogoutHours: 24
+  autoLogoutHours: 24,
+  isStateLoaded: false
 };
 
 let currentView = null;
@@ -101,6 +102,7 @@ function loadState(callback) {
       state.loginTime = parseInt(sessionStorage.getItem('loginTime'), 10) || null;
     }
 
+    state.isStateLoaded = true;
     if (callback) callback();
   }).catch(err => {
     console.error("Error loading state from Firebase:", err);
@@ -109,6 +111,10 @@ function loadState(callback) {
 }
 
 function saveState() {
+  if (!state.isStateLoaded) {
+    console.warn("State not loaded yet. Skipping saveState.");
+    return;
+  }
   // Save departments, employees, autoLogout settings to Firebase
   db.ref('state').set({
     departments: state.departments,
