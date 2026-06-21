@@ -546,10 +546,13 @@ function processSettings() {
   const hours = parseInt(document.getElementById('set-auto-logout').value, 10);
   const error = document.getElementById('set-error');
   if (old !== state.password) { error.textContent = 'Current password is incorrect'; return; }
-  if (!newP) { error.textContent = 'Please enter a new password'; return; }
-  if (newP.length < 4) { error.textContent = 'Password must be at least 4 characters'; return; }
-  if (newP !== confirm) { error.textContent = 'Passwords do not match'; return; }
-  state.password = newP;
+  
+  if (newP) {
+    if (newP.length < 4) { error.textContent = 'Password must be at least 4 characters'; return; }
+    if (newP !== confirm) { error.textContent = 'Passwords do not match'; return; }
+    state.password = newP;
+  }
+  
   state.autoLogoutHours = (hours > 0) ? hours : 24;
   state.loginTime = Date.now();
   saveState();
@@ -965,6 +968,12 @@ function handleKeydown(e) {
 
 /* ---- Init ---- */
 function init() {
+  const localSession = sessionStorage.getItem('isAuthenticated');
+  if (localSession === 'true') {
+    document.getElementById('app-shell').classList.remove('hidden');
+    document.getElementById('login-panel').classList.add('hidden');
+  }
+
   loadState(() => {
     const loginSub = document.getElementById('login-subtitle');
 
