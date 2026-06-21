@@ -341,7 +341,7 @@ function showAddEmployeeModal() {
       if (dept.value) salary.focus();
     });
     salary.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); remark.focus(); }
+      if (e.key === 'Enter') { e.preventDefault(); date.focus(); }
     });
     date.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); remark.focus(); }
