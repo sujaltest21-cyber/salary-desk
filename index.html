@@ -982,6 +982,28 @@ input::-ms-clear {
   color: #1f2937;
 }
 
+.history-modal-table .input-field-sm {
+  width: 100%;
+  padding: 3px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.history-modal-table .input-field-sm:focus {
+  border-color: #1f2937;
+}
+
+.history-modal-table .actions-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
 .history-formula {
   text-align: center;
   padding: 6px 0 14px;
@@ -1744,6 +1766,55 @@ function processIncrement(empId) {
   if (currentView === 'employee-preview') renderEmployeePreview();
 }
 
+function recalculateSalaryHistory(emp) {
+  if (!emp.history || emp.history.length === 0) return;
+  let currentBase = emp.history[0].prevSalary;
+  for (let i = 0; i < emp.history.length; i++) {
+    emp.history[i].prevSalary = currentBase;
+    emp.history[i].newSalary = currentBase + emp.history[i].increment;
+    currentBase = emp.history[i].newSalary;
+  }
+  emp.salary = currentBase;
+}
+
+function deleteHistoryEntry(empId, originalIndex) {
+  const emp = state.employees.find(e => e.id === empId);
+  if (!emp) return;
+  if (confirm("Are you sure you want to delete this increment history entry?")) {
+    const deletedEntry = emp.history[originalIndex];
+    emp.history.splice(originalIndex, 1);
+    if (emp.history.length === 0) {
+      emp.salary = deletedEntry.prevSalary;
+      emp.date = deletedEntry.date;
+    } else {
+      if (originalIndex < emp.history.length) {
+        emp.history[originalIndex].date = deletedEntry.date;
+      }
+      if (originalIndex === emp.history.length) {
+        emp.date = deletedEntry.date;
+      }
+      recalculateSalaryHistory(emp);
+    }
+    saveState();
+    showHistoryModal(empId);
+    if (currentView === 'employee-preview') renderEmployeePreview();
+    else if (currentView === 'employee-master') renderEmployeeMaster();
+  }
+}
+
+function saveHistoryEntry(empId, originalIndex, newIncrement, newDate) {
+  const emp = state.employees.find(e => e.id === empId);
+  if (!emp) return;
+  if (isNaN(newIncrement) || newIncrement < 0 || !newDate) return;
+  emp.history[originalIndex].increment = newIncrement;
+  emp.history[originalIndex].date = newDate;
+  recalculateSalaryHistory(emp);
+  saveState();
+  showHistoryModal(empId);
+  if (currentView === 'employee-preview') renderEmployeePreview();
+  else if (currentView === 'employee-master') renderEmployeeMaster();
+}
+
 /* ---- History Modal ---- */
 function showHistoryModal(empId) {
   const emp = state.employees.find(e => e.id === empId);
@@ -1759,26 +1830,94 @@ function showHistoryModal(empId) {
     formulaHtml = `<div class="history-formula"><span class="hf-prev">${formatCurrency(first.prevSalary)}</span><span class="hf-plus"> + </span><span class="hf-inc">${formatInc(first.increment)}</span><span class="hf-eq"> = </span><span class="hf-new">${formatCurrency(first.newSalary)}</span></div>`;
   }
   let rows = '';
-  history.forEach(h => {
-    rows += `<tr>
+  history.forEach((h, k) => {
+    const originalIndex = history.length - 1 - k;
+    rows += `<tr data-index="${originalIndex}">
       <td>${formatCurrency(h.prevSalary)}</td>
-      <td class="hm-inc">${formatInc(h.increment)}</td>
+      <td>
+        <span class="hist-display-inc hm-inc">${formatInc(h.increment)}</span>
+        <input type="number" class="hist-edit-inc hidden input-field-sm" value="${h.increment}">
+      </td>
       <td class="hm-total">${formatCurrency(h.newSalary)}</td>
-      <td class="hm-date">${formatDate(h.date)}</td>
+      <td>
+        <span class="hist-display-date hm-date">${formatDate(h.date)}</span>
+        <input type="date" class="hist-edit-date hidden input-field-sm" value="${h.date}">
+      </td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-secondary hist-btn-edit">Edit</button>
+        <button class="btn btn-sm btn-danger hist-btn-delete" style="margin-left: 4px;">Delete</button>
+        <button class="btn btn-sm btn-primary hist-btn-save hidden">Save</button>
+        <button class="btn btn-sm btn-secondary hist-btn-cancel hidden" style="margin-left: 4px;">Cancel</button>
+      </td>
     </tr>`;
   });
   openModal('Salary History: ' + emp.name, `
     ${formulaHtml}
     <table class="history-modal-table">
       <thead><tr>
-        <th style="width:22%">Previous</th>
-        <th style="width:18%">Increment</th>
-        <th style="width:22%">Updated</th>
-        <th style="width:38%">Date</th>
+        <th style="width:20%">Previous</th>
+        <th style="width:20%">Increment</th>
+        <th style="width:20%">Updated</th>
+        <th style="width:20%">Date</th>
+        <th style="width:20%">Actions</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-  `);
+  `, true);
+  
+  setTimeout(() => {
+    document.querySelectorAll('.history-modal-table tbody tr').forEach(row => {
+      const originalIndex = parseInt(row.dataset.index, 10);
+      const btnEdit = row.querySelector('.hist-btn-edit');
+      const btnDelete = row.querySelector('.hist-btn-delete');
+      const btnSave = row.querySelector('.hist-btn-save');
+      const btnCancel = row.querySelector('.hist-btn-cancel');
+      
+      const dispInc = row.querySelector('.hist-display-inc');
+      const editInc = row.querySelector('.hist-edit-inc');
+      const dispDate = row.querySelector('.hist-display-date');
+      const editDate = row.querySelector('.hist-edit-date');
+      
+      btnEdit.addEventListener('click', () => {
+        dispInc.classList.add('hidden');
+        editInc.classList.remove('hidden');
+        dispDate.classList.add('hidden');
+        editDate.classList.remove('hidden');
+        
+        btnEdit.classList.add('hidden');
+        btnDelete.classList.add('hidden');
+        btnSave.classList.remove('hidden');
+        btnCancel.classList.remove('hidden');
+        
+        editInc.focus();
+      });
+      
+      btnCancel.addEventListener('click', () => {
+        dispInc.classList.remove('hidden');
+        editInc.classList.add('hidden');
+        dispDate.classList.remove('hidden');
+        editDate.classList.add('hidden');
+        
+        btnEdit.classList.remove('hidden');
+        btnDelete.classList.remove('hidden');
+        btnSave.classList.add('hidden');
+        btnCancel.classList.add('hidden');
+        
+        editInc.value = emp.history[originalIndex].increment;
+        editDate.value = emp.history[originalIndex].date;
+      });
+      
+      btnSave.addEventListener('click', () => {
+        const newIncrement = parseFloat(editInc.value);
+        const newDate = editDate.value;
+        saveHistoryEntry(empId, originalIndex, newIncrement, newDate);
+      });
+      
+      btnDelete.addEventListener('click', () => {
+        deleteHistoryEntry(empId, originalIndex);
+      });
+    });
+  }, 0);
 }
 
 /* ---- Resign / Rehire ---- */
