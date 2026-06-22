@@ -1675,6 +1675,8 @@ function updateEmployeeField(id, field, value) {
     emp.date = value;
   } else if (field === 'remark') {
     emp.remark = value;
+  } else if (field === 'department') {
+    emp.department = value;
   }
   saveState();
   showCheck();
@@ -2050,9 +2052,10 @@ function renderEmployeeMaster() {
       <div class="dept-body">
       <table class="emp-table compact">
         <thead><tr>
-          <th style="width:37%">Name</th>
+          <th style="width:25%">Name</th>
+          <th style="width:15%">Department</th>
           <th style="width:10%">Date</th>
-          <th style="width:15%">Salary</th>
+          <th style="width:12%">Salary</th>
           <th style="width:22%">Remark</th>
           <th style="width:4%">History</th>
           <th style="width:12%">Actions</th>
@@ -2062,6 +2065,11 @@ function renderEmployeeMaster() {
       const hCount = emp.history.length;
       html += `<tr data-id="${emp.id}">
         <td><input class="inline-input name-input" type="text" value="${escHtml(emp.name)}" data-field="name"></td>
+        <td>
+          <select class="inline-input dept-select" data-field="department" data-id="${emp.id}">
+            ${state.departments.map(d => `<option value="${escHtml(d)}" ${d === emp.department ? 'selected' : ''}>${escHtml(d)}</option>`).join('')}
+          </select>
+        </td>
         <td><input class="inline-input" type="date" value="${emp.date || ''}" data-field="date"></td>
         <td><input class="inline-input salary-input" type="number" value="${emp.salary}" data-field="salary"></td>
         <td><input class="inline-input" type="text" value="${escHtml(emp.remark || '')}" data-field="remark" placeholder="Add remark"></td>
@@ -2073,6 +2081,12 @@ function renderEmployeeMaster() {
   });
   html += '</div></div>';
   vp.innerHTML = html;
+  document.querySelectorAll('.dept-select').forEach(select => {
+    select.addEventListener('change', () => {
+      updateEmployeeField(select.dataset.id, 'department', select.value);
+      renderEmployeeMaster();
+    });
+  });
   attachInlineListeners();
   attachHistoryButtons();
   attachIncrementButtons();
