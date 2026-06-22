@@ -1687,8 +1687,26 @@ function showIncrementModal(empId) {
   `);
   document.getElementById('inc-date').value = new Date().toISOString().slice(0, 10);
   setTimeout(() => {
+    const incAmount = document.getElementById('inc-amount');
+    const incDate = document.getElementById('inc-date');
+    if (incAmount) incAmount.focus();
+
     document.getElementById('inc-btn').addEventListener('click', () => processIncrement(empId));
-    document.getElementById('inc-amount').addEventListener('keydown', (e) => { if (e.key === 'Enter') processIncrement(empId); });
+    
+    if (incAmount && incDate) {
+      incAmount.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          incDate.focus();
+        }
+      });
+      incDate.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          processIncrement(empId);
+        }
+      });
+    }
   }, 0);
 }
 
@@ -2205,7 +2223,19 @@ function attachInlineListeners() {
     };
     input.addEventListener('blur', save);
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+        if (currentView === 'employee-preview' && input.dataset.field === 'remark') {
+          const row = input.closest('tr');
+          if (row) {
+            const incBtn = row.querySelector('.inc-btn');
+            if (incBtn) {
+              incBtn.focus();
+            }
+          }
+        }
+      }
     });
   });
 }
