@@ -2057,13 +2057,12 @@ function renderEmployeeMaster() {
       <div class="dept-body">
       <table class="emp-table compact">
         <thead><tr>
-          <th style="width:25%">Name</th>
-          <th style="width:15%">Department</th>
-          <th style="width:10%">Date</th>
-          <th style="width:12%">Salary</th>
-          <th style="width:22%">Remark</th>
+          <th style="width:30%">Name</th>
+          <th style="width:20%">Department</th>
+          <th style="width:12%">Date</th>
+          <th style="width:14%">Salary</th>
+          <th style="width:20%">Remark</th>
           <th style="width:4%">History</th>
-          <th style="width:12%">Actions</th>
         </tr></thead>
         <tbody>`;
     emps.forEach(emp => {
@@ -2079,7 +2078,6 @@ function renderEmployeeMaster() {
         <td><input class="inline-input salary-input" type="number" value="${emp.salary}" data-field="salary"></td>
         <td><input class="inline-input" type="text" value="${escHtml(emp.remark || '')}" data-field="remark" placeholder="Add remark"></td>
         <td>${hCount ? `<button class="history-btn" data-id="${emp.id}">${hCount}</button>` : '<span style="color:#d1d5db;font-size:11px">0</span>'}</td>
-        <td class="actions-cell"><button class="btn btn-sm btn-secondary inc-btn" data-id="${emp.id}">Increment</button><button class="btn btn-sm btn-danger resign-btn" data-id="${emp.id}">Resign</button></td>
       </tr>`;
     });
     html += `</tbody></table></div></div>`;
