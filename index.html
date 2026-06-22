@@ -1410,7 +1410,12 @@ function generateId() {
 
 function formatDate(d) {
   if (!d) return '';
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+  const dateObj = new Date(d + 'T00:00:00');
+  if (isNaN(dateObj.getTime())) return '';
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 function formatCurrency(n) {
@@ -1970,7 +1975,7 @@ function renderEmployeePreview() {
       const hCount = emp.history.length;
       html += `<tr data-id="${emp.id}">
         <td><input class="inline-input name-input" type="text" value="${escHtml(emp.name)}" readonly></td>
-        <td><input class="inline-input" type="date" value="${emp.date || ''}" readonly></td>
+        <td><input class="inline-input" type="text" value="${formatDate(emp.date)}" readonly></td>
         <td><input class="inline-input salary-input" type="number" value="${emp.salary}" data-field="salary" readonly></td>
         <td><input class="inline-input" type="text" value="${escHtml(emp.remark || '')}" data-field="remark" placeholder="Add remark"></td>
         <td>${hCount ? `<button class="history-btn" data-id="${emp.id}">${hCount}</button>` : '<span style="color:#d1d5db;font-size:11px">0</span>'}</td>
