@@ -1802,13 +1802,38 @@ function confirmResign(empId) {
   if (currentView === 'employee-preview') renderEmployeePreview();
 }
 
-function rehireEmployee(empId) {
+function showRehireModal(empId) {
   const emp = state.employees.find(e => e.id === empId);
   if (!emp) return;
+  openModal('Rehire: ' + emp.name, `
+    <p style="color:#6b7280;font-size:13px;margin-bottom:12px">Select rehire date for <strong>${escHtml(emp.name)}</strong> (${escHtml(emp.department)})</p>
+    <input type="date" id="rehire-date" class="input-field">
+    <button id="confirm-rehire-btn" class="btn btn-primary btn-block">Confirm Rehire</button>
+  `);
+  document.getElementById('rehire-date').value = new Date().toISOString().slice(0, 10);
+  setTimeout(() => {
+    document.getElementById('confirm-rehire-btn').addEventListener('click', () => confirmRehire(empId));
+    document.getElementById('rehire-date').focus();
+    document.getElementById('rehire-date').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmRehire(empId);
+      }
+    });
+  }, 0);
+}
+
+function confirmRehire(empId) {
+  const emp = state.employees.find(e => e.id === empId);
+  if (!emp) return;
+  const newDate = document.getElementById('rehire-date').value;
+  if (!newDate) return;
   emp.status = 'active';
+  emp.date = newDate;
   emp.resignationDate = null;
   emp.resignationReason = null;
   saveState();
+  closeModal();
   showCheck();
   renderResignTab();
 }
@@ -2107,7 +2132,7 @@ function renderResignTab() {
   vp.innerHTML = html;
   attachCollapseHeaders();
   document.querySelectorAll('.rehire-btn').forEach(btn => {
-    btn.addEventListener('click', () => rehireEmployee(btn.dataset.id));
+    btn.addEventListener('click', () => showRehireModal(btn.dataset.id));
   });
   document.querySelectorAll('.delete-resigned-btn').forEach(btn => {
     btn.addEventListener('click', () => {
