@@ -1572,6 +1572,7 @@ function handleLogout() {
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-subtitle').textContent = 'Enter password to continue';
   closeModal();
+  document.getElementById('password-input').focus();
 }
 
 function showApp() {
@@ -2543,6 +2544,10 @@ function init() {
     if (state.password && state.isAuthenticated) {
       checkSessionTimeout();
       if (state.isAuthenticated) showApp();
+    }
+
+    if (!state.isAuthenticated) {
+      document.getElementById('password-input').focus();
     }
   });
 
