@@ -1291,6 +1291,7 @@ input::-ms-clear {
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
 const STORAGE_KEY = 'salary_mgmt_state';
@@ -1309,10 +1310,12 @@ const firebaseConfig = {
 
 // Initialize Firebase with fallback safety check
 let db;
+let auth;
 if (typeof firebase !== 'undefined') {
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
+    auth = firebase.auth();
   } catch (e) {
     console.error("Firebase initialization failed:", e);
     setupMockDb();
@@ -1322,6 +1325,11 @@ if (typeof firebase !== 'undefined') {
   setupMockDb();
 }
 
+let mockDbStore = {
+  hasAdmin: false,
+  state: null
+};
+
 function setupMockDb() {
   db = {
     ref: function (path) {
@@ -1329,21 +1337,46 @@ function setupMockDb() {
         once: function (event) {
           return Promise.resolve({
             val: function () {
-              return null;
+              return mockDbStore[path] || null;
             }
           });
         },
         set: function (value) {
+          mockDbStore[path] = value;
           return Promise.resolve();
         }
       };
+    }
+  };
+  auth = {
+    onAuthStateChanged: function (callback) {
+      auth._callback = callback;
+      callback(null);
+      return function () {};
+    },
+    signInWithEmailAndPassword: function (email, password) {
+      state.isAuthenticated = true;
+      if (auth._callback) auth._callback({ uid: 'mock-admin', email: email });
+      return Promise.resolve();
+    },
+    createUserWithEmailAndPassword: function (email, password) {
+      state.isAuthenticated = true;
+      if (auth._callback) auth._callback({ uid: 'mock-admin', email: email });
+      return Promise.resolve();
+    },
+    signOut: function () {
+      state.isAuthenticated = false;
+      if (auth._callback) auth._callback(null);
+      return Promise.resolve();
+    },
+    currentUser: {
+      email: 'admin@salarydesk.local'
     }
   };
 }
 
 let state = {
   isAuthenticated: false,
-  password: '',
   departments: [],
   employees: [],
   loginTime: null,
@@ -1354,18 +1387,31 @@ let state = {
 let currentView = null;
 let sessionTimer = null;
 
-function loadState(callback) {
-  // Fetch admin password from Firebase database
-  db.ref('adminPassword').once('value').then(pwdSnap => {
-    state.password = pwdSnap.val() || '';
+function checkAdminExists(callback) {
+  const loginSub = document.getElementById('login-subtitle');
+  db.ref('hasAdmin').once('value').then(snap => {
+    const exists = snap.val() === true;
+    if (exists) {
+      loginSub.textContent = 'Enter password to continue';
+      toggleFieldVisibility('password-confirm', false);
+    } else {
+      loginSub.textContent = 'Set your admin password';
+      toggleFieldVisibility('password-confirm', true);
+    }
+    if (callback) callback();
+  }).catch(err => {
+    console.error("Error checking hasAdmin:", err);
+    loginSub.textContent = 'Enter password to continue';
+    toggleFieldVisibility('password-confirm', false);
+    if (callback) callback();
+  });
+}
 
-    // Fetch departments, employees and autoLogout settings
-    return db.ref('state').once('value');
-  }).then(stateSnap => {
+function loadState(callback) {
+  db.ref('state').once('value').then(stateSnap => {
     const saved = stateSnap.val() || {};
     state.departments = Array.isArray(saved.departments) ? saved.departments : [];
 
-    // Retrieve and normalize employees list (Firebase can return arrays or objects, and drops empty arrays like history)
     let rawEmployees = [];
     if (saved.employees) {
       if (Array.isArray(saved.employees)) {
@@ -1390,12 +1436,8 @@ function loadState(callback) {
 
     state.autoLogoutHours = saved.autoLogoutHours || 24;
 
-    // Check if the user is authenticated in the current browser session using sessionStorage (no localStorage used)
-    const localSession = sessionStorage.getItem('isAuthenticated');
-    if (localSession === 'true') {
-      state.isAuthenticated = true;
-      state.loginTime = parseInt(sessionStorage.getItem('loginTime'), 10) || null;
-    }
+    sessionStorage.setItem('isAuthenticated', 'true');
+    sessionStorage.setItem('loginTime', String(state.loginTime));
 
     state.isStateLoaded = true;
     if (callback) callback();
@@ -1410,19 +1452,12 @@ function saveState() {
     console.warn("State not loaded yet. Skipping saveState.");
     return;
   }
-  // Save departments, employees, autoLogout settings to Firebase
   db.ref('state').set({
     departments: state.departments,
     employees: state.employees,
     autoLogoutHours: state.autoLogoutHours
   });
 
-  // Save adminPassword to Firebase if set
-  if (state.password) {
-    db.ref('adminPassword').set(state.password);
-  }
-
-  // Track tab session status in sessionStorage instead of localStorage
   if (state.isAuthenticated) {
     sessionStorage.setItem('isAuthenticated', 'true');
     sessionStorage.setItem('loginTime', String(state.loginTime));
@@ -1531,38 +1566,79 @@ function handleLogin() {
   const confirm = document.getElementById('password-confirm');
   const error = document.getElementById('login-error');
   const val = input.value.trim();
+  const btn = document.getElementById('login-btn');
 
-  if (!state.password) {
-    const val2 = confirm.value.trim();
-    if (!val) { error.textContent = 'Please enter a password'; return; }
-    if (val.length < 4) { error.textContent = 'Password must be at least 4 characters'; return; }
-    if (val !== val2) { error.textContent = 'Passwords do not match'; return; }
-    state.password = val;
-    state.isAuthenticated = true;
-    state.loginTime = Date.now();
-    saveState();
-    showApp();
-    return;
-  }
+  if (!val) { error.textContent = 'Please enter a password'; return; }
 
-  if (!val) { error.textContent = 'Please enter your password'; return; }
-  if (val === state.password) {
-    state.isAuthenticated = true;
-    state.loginTime = Date.now();
-    saveState();
-    showApp();
-  } else {
-    error.textContent = 'Incorrect password';
-    input.value = '';
-    input.focus();
-  }
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  error.textContent = '';
+
+  db.ref('hasAdmin').once('value').then(snap => {
+    const exists = snap.val() === true;
+    if (!exists) {
+      const val2 = confirm.value.trim();
+      if (val.length < 4) {
+        error.textContent = 'Password must be at least 4 characters';
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+        return;
+      }
+      if (val !== val2) {
+        error.textContent = 'Passwords do not match';
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+        return;
+      }
+      
+      auth.createUserWithEmailAndPassword('admin@salarydesk.local', val).then(() => {
+        return db.ref('hasAdmin').set(true);
+      }).then(() => {
+        // user created and flagged
+      }).catch(err => {
+        error.textContent = err.message;
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+      });
+    } else {
+      auth.signInWithEmailAndPassword('admin@salarydesk.local', val).catch(err => {
+        error.textContent = 'Incorrect password';
+        input.value = '';
+        input.focus();
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+      });
+    }
+  }).catch(err => {
+    console.error("Error checking hasAdmin:", err);
+    auth.signInWithEmailAndPassword('admin@salarydesk.local', val).catch(authErr => {
+      error.textContent = 'Authentication failed. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Continue';
+    });
+  });
 }
 
 function handleLogout() {
+  if (auth && typeof auth.signOut === 'function') {
+    auth.signOut().then(() => {
+      handleLogoutUI();
+    }).catch(err => {
+      console.error("Sign out failed:", err);
+    });
+  } else {
+    handleLogoutUI();
+  }
+}
+
+function handleLogoutUI() {
   state.isAuthenticated = false;
   state.loginTime = null;
   currentView = null;
-  saveState();
+  
+  sessionStorage.removeItem('isAuthenticated');
+  sessionStorage.removeItem('loginTime');
+
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('login-panel').classList.remove('hidden');
   document.getElementById('app-viewport').innerHTML = '';
@@ -1570,9 +1646,17 @@ function handleLogout() {
   document.getElementById('password-confirm').value = '';
   toggleFieldVisibility('password-confirm', false);
   document.getElementById('login-error').textContent = '';
-  document.getElementById('login-subtitle').textContent = 'Enter password to continue';
-  closeModal();
-  document.getElementById('password-input').focus();
+  
+  const btn = document.getElementById('login-btn');
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Continue';
+  }
+
+  checkAdminExists(() => {
+    closeModal();
+    document.getElementById('password-input').focus();
+  });
 }
 
 function showApp() {
@@ -2014,19 +2098,57 @@ function processSettings() {
   const confirm = document.getElementById('set-confirm-pass').value.trim();
   const hours = parseInt(document.getElementById('set-auto-logout').value, 10);
   const error = document.getElementById('set-error');
-  if (old !== state.password) { error.textContent = 'Current password is incorrect'; return; }
+  
+  if (!old) { error.textContent = 'Please enter your current password'; return; }
   
   if (newP) {
     if (newP.length < 4) { error.textContent = 'Password must be at least 4 characters'; return; }
     if (newP !== confirm) { error.textContent = 'Passwords do not match'; return; }
-    state.password = newP;
   }
-  
-  state.autoLogoutHours = (hours > 0) ? hours : 24;
-  state.loginTime = Date.now();
-  saveState();
-  closeModal();
-  showCheck();
+
+  const btn = document.getElementById('set-save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  const updateSettingsOnly = () => {
+    state.autoLogoutHours = (hours > 0) ? hours : 24;
+    saveState();
+    closeModal();
+    showCheck();
+  };
+
+  if (newP) {
+    if (auth.currentUser && typeof auth.currentUser.reauthenticateWithCredential === 'function') {
+      const user = auth.currentUser;
+      const credential = firebase.auth.EmailAuthProvider.credential(user.email, old);
+      user.reauthenticateWithCredential(credential).then(() => {
+        return user.updatePassword(newP);
+      }).then(() => {
+        updateSettingsOnly();
+      }).catch(err => {
+        console.error("Password update failed:", err);
+        error.textContent = err.message || 'Incorrect current password or update failed';
+        btn.disabled = false;
+        btn.textContent = 'Save Settings';
+      });
+    } else {
+      updateSettingsOnly();
+    }
+  } else {
+    if (auth.currentUser && typeof auth.currentUser.reauthenticateWithCredential === 'function') {
+      const user = auth.currentUser;
+      const credential = firebase.auth.EmailAuthProvider.credential(user.email, old);
+      user.reauthenticateWithCredential(credential).then(() => {
+        updateSettingsOnly();
+      }).catch(err => {
+        error.textContent = 'Incorrect current password';
+        btn.disabled = false;
+        btn.textContent = 'Save Settings';
+      });
+    } else {
+      updateSettingsOnly();
+    }
+  }
 }
 
 /* ---- Rendering: Employee List (Master Name Editor) ---- */
@@ -2528,28 +2650,30 @@ function init() {
   if (localSession === 'true') {
     document.getElementById('app-shell').classList.remove('hidden');
     document.getElementById('login-panel').classList.add('hidden');
+    state.isAuthenticated = true;
+    state.loginTime = parseInt(sessionStorage.getItem('loginTime'), 10) || null;
   }
 
-  loadState(() => {
-    const loginSub = document.getElementById('login-subtitle');
-
-    if (state.password) {
-      loginSub.textContent = 'Enter password to continue';
-      toggleFieldVisibility('password-confirm', false);
-    } else {
-      loginSub.textContent = 'Set your admin password';
-      toggleFieldVisibility('password-confirm', true);
+  if (typeof firebase !== 'undefined' && auth) {
+    try {
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          state.isAuthenticated = true;
+          state.loginTime = state.loginTime || Date.now();
+          loadState(() => {
+            showApp();
+          });
+        } else {
+          handleLogoutUI();
+        }
+      });
+    } catch (e) {
+      console.error("Auth listener setup failed:", e);
+      checkAdminExists();
     }
-
-    if (state.password && state.isAuthenticated) {
-      checkSessionTimeout();
-      if (state.isAuthenticated) showApp();
-    }
-
-    if (!state.isAuthenticated) {
-      document.getElementById('password-input').focus();
-    }
-  });
+  } else {
+    checkAdminExists();
+  }
 
   setupPasswordToggle('password-input');
   setupPasswordToggle('password-confirm');
