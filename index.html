@@ -1294,6 +1294,22 @@ input::-ms-clear {
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
+(function() {
+  // Anti-debugging loop
+  (function() {
+    function freezeDebugger() {
+      try {
+        (function() {
+          (function() {
+            debugger;
+          })();
+        })();
+      } catch (e) {}
+      setTimeout(freezeDebugger, 100);
+    }
+    freezeDebugger();
+  })();
+
 const STORAGE_KEY = 'salary_mgmt_state';
 const CURRENCY = '\u20B9';
 
@@ -1518,6 +1534,12 @@ function handleLogin() {
   const confirm = document.getElementById('password-confirm');
   const error = document.getElementById('login-error');
   const val = input.value.trim();
+  const val2 = confirm.value.trim();
+  
+  // Clear inputs immediately
+  if (input) input.value = '';
+  if (confirm) confirm.value = '';
+
   const btn = document.getElementById('login-btn');
 
   if (!val) { error.textContent = 'Please enter a password'; return; }
@@ -1529,7 +1551,6 @@ function handleLogin() {
   db.ref('hasAdmin').once('value').then(snap => {
     const exists = snap.val() === true;
     if (!exists) {
-      const val2 = confirm.value.trim();
       if (val.length < 4) {
         error.textContent = 'Password must be at least 4 characters';
         btn.disabled = false;
@@ -1555,8 +1576,7 @@ function handleLogin() {
     } else {
       auth.signInWithEmailAndPassword('admin@salarydesk.local', val).catch(err => {
         error.textContent = 'Incorrect password';
-        input.value = '';
-        input.focus();
+        if (input) input.focus();
         btn.disabled = false;
         btn.textContent = 'Continue';
       });
@@ -2045,11 +2065,19 @@ function showSettingsModal() {
 }
 
 function processSettings() {
-  const old = document.getElementById('set-old-pass').value.trim();
-  const newP = document.getElementById('set-new-pass').value.trim();
-  const confirm = document.getElementById('set-confirm-pass').value.trim();
+  const oldInput = document.getElementById('set-old-pass');
+  const newInput = document.getElementById('set-new-pass');
+  const confirmInput = document.getElementById('set-confirm-pass');
+  const old = oldInput ? oldInput.value.trim() : '';
+  const newP = newInput ? newInput.value.trim() : '';
+  const confirm = confirmInput ? confirmInput.value.trim() : '';
   const hours = parseInt(document.getElementById('set-auto-logout').value, 10);
   const error = document.getElementById('set-error');
+
+  // Clear inputs immediately
+  if (oldInput) oldInput.value = '';
+  if (newInput) newInput.value = '';
+  if (confirmInput) confirmInput.value = '';
   
   if (!old) { error.textContent = 'Please enter your current password'; return; }
   
@@ -2674,6 +2702,7 @@ function init() {
 
 document.addEventListener('DOMContentLoaded', init);
 
+})();
 </script>
 </body>
 
