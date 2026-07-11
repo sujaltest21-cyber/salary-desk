@@ -1309,70 +1309,22 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase with fallback safety check
-let db;
-let auth;
+// Initialize Firebase with safety check
+let db = null;
+let auth = null;
+let firebaseInitialized = false;
+
 if (typeof firebase !== 'undefined') {
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
     auth = firebase.auth();
+    firebaseInitialized = true;
   } catch (e) {
     console.error("Firebase initialization failed:", e);
-    setupMockDb();
   }
 } else {
   console.error("Firebase SDK not loaded from CDN.");
-  setupMockDb();
-}
-
-let mockDbStore = {
-  hasAdmin: false,
-  state: null
-};
-
-function setupMockDb() {
-  db = {
-    ref: function (path) {
-      return {
-        once: function (event) {
-          return Promise.resolve({
-            val: function () {
-              return mockDbStore[path] || null;
-            }
-          });
-        },
-        set: function (value) {
-          mockDbStore[path] = value;
-          return Promise.resolve();
-        }
-      };
-    }
-  };
-  auth = {
-    onAuthStateChanged: function (callback) {
-      auth._callback = callback;
-      callback(null);
-      return function () {};
-    },
-    signInWithEmailAndPassword: function (email, password) {
-      state.isAuthenticated = true;
-      if (auth._callback) auth._callback({ uid: 'mock-admin', email: email });
-      return Promise.resolve();
-    },
-    createUserWithEmailAndPassword: function (email, password) {
-      state.isAuthenticated = true;
-      if (auth._callback) auth._callback({ uid: 'mock-admin', email: email });
-      return Promise.resolve();
-    },
-    signOut: function () {
-      state.isAuthenticated = false;
-      if (auth._callback) auth._callback(null);
-      return Promise.resolve();
-    },
-    currentUser: {
-      email: 'admin@salarydesk.local'
-    }
-  };
 }
 
 let state = {
@@ -2591,9 +2543,13 @@ function attachCollapseHeaders() {
 }
 
 function escHtml(s) {
+  if (s === null || s === undefined) return '';
+  const str = String(s);
   const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
+  div.textContent = str;
+  return div.innerHTML
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /* ---- Navigation ---- */
@@ -2646,6 +2602,23 @@ function handleKeydown(e) {
 
 /* ---- Init ---- */
 function init() {
+  if (!firebaseInitialized || !db || !auth) {
+    sessionStorage.removeItem('isAuthenticated');
+    sessionStorage.removeItem('loginTime');
+    document.getElementById('app-shell').classList.add('hidden');
+    document.getElementById('login-panel').classList.remove('hidden');
+    document.getElementById('login-subtitle').textContent = 'Connection Error';
+    const errorEl = document.getElementById('login-error');
+    if (errorEl) {
+      errorEl.textContent = 'Database connection error. Please check your internet connection and reload.';
+    }
+    const pwdInput = document.getElementById('password-input');
+    if (pwdInput) pwdInput.disabled = true;
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) loginBtn.disabled = true;
+    return;
+  }
+
   const localSession = sessionStorage.getItem('isAuthenticated');
   if (localSession === 'true') {
     document.getElementById('app-shell').classList.remove('hidden');
@@ -2654,24 +2627,20 @@ function init() {
     state.loginTime = parseInt(sessionStorage.getItem('loginTime'), 10) || null;
   }
 
-  if (typeof firebase !== 'undefined' && auth) {
-    try {
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          state.isAuthenticated = true;
-          state.loginTime = state.loginTime || Date.now();
-          loadState(() => {
-            showApp();
-          });
-        } else {
-          handleLogoutUI();
-        }
-      });
-    } catch (e) {
-      console.error("Auth listener setup failed:", e);
-      checkAdminExists();
-    }
-  } else {
+  try {
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        state.isAuthenticated = true;
+        state.loginTime = state.loginTime || Date.now();
+        loadState(() => {
+          showApp();
+        });
+      } else {
+        handleLogoutUI();
+      }
+    });
+  } catch (e) {
+    console.error("Auth listener setup failed:", e);
     checkAdminExists();
   }
 
